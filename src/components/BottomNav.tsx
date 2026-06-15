@@ -1,7 +1,7 @@
 import Link from "next/link";
 
 type BottomNavProps = {
-  active?: "map" | "nearby";
+  active?: "map" | "nearby" | "account";
 };
 
 export default function BottomNav({ active }: BottomNavProps) {
@@ -23,9 +23,14 @@ export default function BottomNav({ active }: BottomNavProps) {
       >
         whats nearby!
       </Link>
-      <button type="button" className="nav-btn" aria-label="Profile">
+      <Link
+        href="/account"
+        className={`nav-btn nav-link${active === "account" ? " nav-btn-active" : ""}`}
+        aria-label="Profile"
+        aria-current={active === "account" ? "page" : undefined}
+      >
         profile
-      </button>
+      </Link>
     </nav>
   );
 }
