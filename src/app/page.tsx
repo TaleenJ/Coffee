@@ -11,9 +11,13 @@ export default function HomePage() {
   const [selectedVibes, setSelectedVibes] = useState<Vibe[]>([]);
   const [shops, setShops] = useState<CoffeeShop[]>([]);
   const [status, setStatus] = useState<"idle" | "loading" | "error" | "done">("idle");
+  const [errorMessage, setErrorMessage] = useState<string>(
+    "Couldn't get your location. Please enable location access and refresh.",
+  );
 
   useEffect(() => {
     if (!("geolocation" in navigator)) {
+      setErrorMessage("This browser doesn't support geolocation.");
       setStatus("error");
       return;
     }
@@ -23,6 +27,7 @@ export default function HomePage() {
     navigator.geolocation.getCurrentPosition(
       async (position) => {
         const { latitude, longitude } = position.coords;
+        console.log("Got coordinates:", latitude, longitude);
 
         try {
           const response = await fetch(
@@ -34,11 +39,26 @@ export default function HomePage() {
 
           setShops(data.shops);
           setStatus("done");
-        } catch {
+        } catch (err) {
+          console.error("Failed to load nearby shops:", err);
+          setErrorMessage(
+            "Found your location, but couldn't load nearby coffee shops. Please try again in a moment.",
+          );
           setStatus("error");
         }
       },
-      () => setStatus("error"),
+      (geoError) => {
+        console.error("Geolocation error:", geoError.code, geoError.message);
+        const messages: Record<number, string> = {
+          1: "Location access is blocked for this site. Check your browser's site settings and your OS location settings, then refresh.",
+          2: "Your device couldn't determine your location right now. Make sure location services are turned on.",
+          3: "Getting your location took too long. Please try again.",
+        };
+        setErrorMessage(
+          messages[geoError.code] ?? "Couldn't get your location. Please enable location access and refresh.",
+        );
+        setStatus("error");
+      },
       { enableHighAccuracy: false, timeout: 10000 },
     );
   }, []);
@@ -75,9 +95,7 @@ export default function HomePage() {
             <p className="empty-state">Finding coffee shops near you...</p>
           )}
           {status === "error" && (
-            <p className="empty-state">
-              Couldn&apos;t get your location. Please enable location access and refresh.
-            </p>
+            <p className="empty-state">{errorMessage}</p>
           )}
           {status === "done" && filteredShops.length === 0 && (
             <p className="empty-state">No coffee shops match those vibes yet.</p>
@@ -100,4 +118,3 @@ export default function HomePage() {
     </div>
   );
 }
-
