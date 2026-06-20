@@ -60,15 +60,44 @@ export async function GET(request: Request) {
     out center tags;
   `;
 
-    const response = await fetch("https://overpass-api.de/api/interpreter", {
-        method: "POST",
-        headers: { "Content-Type": "text/plain" },
-        body: query,
-        next: { revalidate: 3600 },
-    });
+    let response: Response;
+    try {
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 20000);
+
+        response = await fetch("https://overpass-api.de/api/interpreter", {
+            method: "POST",
+            headers: {
+                "Content-Type": "text/plain",
+                "Accept": "*/*",
+                "User-Agent": "MapAhead/1.0 (coffee map demo)",
+            },
+            body: query,
+            next: { revalidate: 3600 },
+            signal: controller.signal,
+        });
+
+        clearTimeout(timeoutId);
+    } catch (err) {
+        console.error("Overpass fetch threw an error:", err);
+        return Response.json(
+            { error: "Couldn't reach the Overpass API (network error). See server logs." },
+            { status: 502 },
+        );
+    }
 
     if (!response.ok) {
-        return Response.json({ error: "Overpass API unavailable" }, { status: 502 });
+        const bodyText = await response.text().catch(() => "<no body>");
+        console.error(
+            "Overpass API returned an error:",
+            response.status,
+            response.statusText,
+            bodyText.slice(0, 500),
+        );
+        return Response.json(
+            { error: `Overpass API unavailable (status ${response.status})` },
+            { status: 502 },
+        );
     }
 
     const data = (await response.json()) as OverpassResponse;
