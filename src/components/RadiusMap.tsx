@@ -16,27 +16,38 @@ export default function RadiusMap({ lat, lng, zip }: RadiusMapProps) {
   const mapRef = useRef<L.Map | null>(null);
   const circleRef = useRef<L.Circle | null>(null);
   const markerRef = useRef<L.CircleMarker | null>(null);
+  const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
     if (!containerRef.current) return;
 
+    // Create map only once, with an initial view so Leaflet
+    // has a center + zoom before we ever call fitBounds
     if (!mapRef.current) {
       mapRef.current = L.map(containerRef.current, {
         zoomControl: true,
         scrollWheelZoom: true,
+        center: [lat, lng],
+        zoom: 11,
       });
 
       L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
-        attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>',
+        attribution:
+          '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>',
         maxZoom: 19,
       }).addTo(mapRef.current);
+    } else {
+      // For subsequent zip searches, re-center manually
+      mapRef.current.setView([lat, lng], 11);
     }
 
     const map = mapRef.current;
 
+    // Remove old shapes
     circleRef.current?.remove();
     markerRef.current?.remove();
 
+    // Draw new circle + marker
     const circle = L.circle([lat, lng], {
       radius: FIVE_MILES_IN_METERS,
       color: "#6b5344",
@@ -58,15 +69,35 @@ export default function RadiusMap({ lat, lng, zip }: RadiusMapProps) {
     circleRef.current = circle;
     markerRef.current = marker;
 
-    map.fitBounds(circle.getBounds(), { padding: [28, 28] });
+    // Cancel any pending timer from a previous run
+    if (timerRef.current) clearTimeout(timerRef.current);
+
+    // Use setTimeout instead of requestAnimationFrame —
+    // gives Leaflet enough time to finish internal layout
+    timerRef.current = setTimeout(() => {
+      if (!mapRef.current) return;
+      mapRef.current.invalidateSize();
+      mapRef.current.fitBounds(circle.getBounds(), { padding: [28, 28] });
+    }, 100);
+
+    return () => {
+      if (timerRef.current) clearTimeout(timerRef.current);
+    };
   }, [lat, lng, zip]);
 
   useEffect(() => {
     return () => {
+      if (timerRef.current) clearTimeout(timerRef.current);
       mapRef.current?.remove();
       mapRef.current = null;
     };
   }, []);
 
-  return <div ref={containerRef} className="map-container" aria-label="Coffee shop map" />;
+  return (
+    <div
+      ref={containerRef}
+      className="map-container"
+      aria-label="Coffee shop map"
+    />
+  );
 }
