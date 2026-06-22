@@ -11,9 +11,25 @@ export type CoffeeShop = {
     id: string;
     name: string;
     distanceMiles: number;
-    rating: number;
+    rating?: number;
     address: string;
+    lat?: number;
+    lng?: number;
     vibes: Vibe[];
+};
+
+// A shop as stored/restored from favorites. Looser than CoffeeShop because
+// favorites come from dynamic OSM data (no rating) and are persisted as a
+// snapshot. CoffeeShop is structurally assignable to FavoriteShop.
+export type FavoriteShop = {
+    id: string;
+    name: string;
+    address: string;
+    distanceMiles?: number;
+    rating?: number;
+    lat?: number;
+    lng?: number;
+    vibes: string[];
 };
 
 export const ALL_VIBES: Vibe[] = [

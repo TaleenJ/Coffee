@@ -204,13 +204,94 @@ body {
 }
 
 .shop-card {
+  position: relative;
   background: #fff;
   border: 1px solid #e0d8cf;
   border-radius: 14px;
   padding: 14px 16px;
+  padding-right: 52px;
   display: flex;
   flex-direction: column;
   gap: 8px;
+}
+
+/* Favorite star button */
+.fav-star {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  width: 36px;
+  height: 36px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: none;
+  background: transparent;
+  cursor: pointer;
+  border-radius: 999px;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.fav-star:disabled {
+  cursor: default;
+  opacity: 0.5;
+}
+
+.fav-star-icon {
+  font-size: 1.5rem;
+  line-height: 1;
+  color: #c9bdb0;
+  transition: transform 0.15s ease, color 0.15s ease;
+}
+
+.fav-star-active .fav-star-icon {
+  color: #f5b50a;
+  text-shadow: 0 1px 2px rgba(180, 130, 0, 0.35);
+}
+
+.fav-star:active .fav-star-icon {
+  transform: scale(0.85);
+}
+
+.fav-star:not(:disabled):hover .fav-star-icon {
+  transform: scale(1.12);
+}
+
+/* Splash / pop burst when a shop is favorited */
+.fav-star-splash {
+  position: absolute;
+  inset: 0;
+  margin: auto;
+  width: 14px;
+  height: 14px;
+  border-radius: 999px;
+  background: #f5b50a;
+  pointer-events: none;
+  animation: fav-splash 0.5s ease-out forwards;
+}
+
+@keyframes fav-splash {
+  0% {
+    opacity: 0.65;
+    transform: scale(0.3);
+  }
+  70% {
+    opacity: 0.25;
+  }
+  100% {
+    opacity: 0;
+    transform: scale(3.2);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .fav-star-icon {
+    transition: none;
+  }
+  .fav-star-splash {
+    animation: none;
+    display: none;
+  }
 }
 
 .shop-name {
@@ -452,6 +533,8 @@ body {
 }
 
 .account-list-item {
+  display: flex;
+  align-items: center;
   width: 100%;
   min-height: 48px;
   border-radius: 12px;
@@ -461,6 +544,7 @@ body {
   text-align: left;
   padding: 12px 14px;
   font-weight: 600;
+  text-decoration: none;
 }
 
 @keyframes sheet-up {

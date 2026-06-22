@@ -27,3 +27,21 @@ CREATE INDEX IF NOT EXISTS idx_customer_sessions_token
 
 CREATE INDEX IF NOT EXISTS idx_customer_sessions_customer
   ON customer_sessions(customer_id);
+
+CREATE TABLE IF NOT EXISTS customer_favorites (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  customer_id UUID NOT NULL REFERENCES customers(id) ON DELETE CASCADE,
+  osm_id TEXT NOT NULL,
+  name TEXT NOT NULL,
+  address TEXT,
+  lat DOUBLE PRECISION,
+  lng DOUBLE PRECISION,
+  distance_miles DOUBLE PRECISION,
+  rating DOUBLE PRECISION,
+  vibes TEXT[] NOT NULL DEFAULT '{}',
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  UNIQUE (customer_id, osm_id)
+);
+
+CREATE INDEX IF NOT EXISTS idx_customer_favorites_customer
+  ON customer_favorites(customer_id);

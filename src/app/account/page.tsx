@@ -3,7 +3,7 @@ import BottomNav from "@/components/BottomNav";
 import LogoutButton from "@/components/LogoutButton";
 import { getCurrentCustomer } from "@/lib/auth";
 
-const accountItems = ["Favorites", "Orders", "Payment Methods", "Settings"];
+const accountItems = ["Orders", "Payment Methods", "Settings"];
 
 export default async function AccountGuestPage() {
   const customer = await getCurrentCustomer();
@@ -18,6 +18,9 @@ export default async function AccountGuestPage() {
           <>
             <h1 className="account-title">Hello {customer.name || "Richard"} ☕</h1>
             <div className="account-list">
+              <Link href="/account/favorites" className="account-list-item">
+                Favorites
+              </Link>
               {accountItems.map((item) => (
                 <button key={item} type="button" className="account-list-item">
                   {item}
