@@ -1,0 +1,11 @@
+{
+  "remoteName": "origin",
+  "projects": [
+    {
+      "id": "prj_I0iJjAGuZebhDW3gjWHkjofYfdcw",
+      "name": "coffee",
+      "directory": ".",
+      "orgId": "team_jqs8vI1vfnLF7i0PrefdL1Gc"
+    }
+  ]
+}

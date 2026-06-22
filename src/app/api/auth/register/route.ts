@@ -1,10 +1,6 @@
 import bcrypt from "bcryptjs";
 import { NextResponse } from "next/server";
-import {
-  generateSessionToken,
-  getSessionDuration,
-  setSessionCookie,
-} from "@/lib/auth";
+import { createSession, getClientInfo } from "@/lib/auth";
 import { ensureAuthTables, getPool } from "@/lib/db";
 
 export async function POST(request: Request) {
@@ -50,28 +46,35 @@ export async function POST(request: Request) {
     }
 
     const passwordHash = await bcrypt.hash(password, 10);
-    const inserted = await getPool().query<{ id: string; name: string; email: string }>(
-      `
-        INSERT INTO customers (name, email, password_hash)
-        VALUES ($1, $2, $3)
-        RETURNING id, name, email;
-      `,
-      [name, email, passwordHash],
-    );
 
-    const customer = inserted.rows[0];
-    const token = generateSessionToken();
-    const maxAge = getSessionDuration(rememberMe);
+    let customer: { id: string; name: string; email: string };
+    try {
+      const inserted = await getPool().query<{
+        id: string;
+        name: string;
+        email: string;
+      }>(
+        `
+          INSERT INTO customers (name, email, password_hash)
+          VALUES ($1, $2, $3)
+          RETURNING id, name, email;
+        `,
+        [name, email, passwordHash],
+      );
+      customer = inserted.rows[0];
+    } catch (insertError) {
+      // The UNIQUE(email) constraint is the real guarantee against duplicate
+      // accounts; it also closes the race where two requests pass the pre-check.
+      if (isUniqueViolation(insertError)) {
+        return NextResponse.json(
+          { error: "An account with that email already exists." },
+          { status: 409 },
+        );
+      }
+      throw insertError;
+    }
 
-    await getPool().query(
-      `
-        INSERT INTO customer_sessions (customer_id, session_token, remember_me, expires_at)
-        VALUES ($1, $2, $3, NOW() + ($4 || ' seconds')::interval);
-      `,
-      [customer.id, token, rememberMe, maxAge ?? 60 * 60 * 8],
-    );
-
-    await setSessionCookie(token, rememberMe);
+    await createSession(customer.id, rememberMe, getClientInfo(request));
 
     return NextResponse.json({ customer });
   } catch (error) {
@@ -81,4 +84,14 @@ export async function POST(request: Request) {
       { status: 500 },
     );
   }
+}
+
+// Postgres raises SQLSTATE 23505 on a unique-constraint violation.
+function isUniqueViolation(error: unknown): boolean {
+  return (
+    typeof error === "object" &&
+    error !== null &&
+    "code" in error &&
+    (error as { code?: string }).code === "23505"
+  );
 }

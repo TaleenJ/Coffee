@@ -1,10 +1,6 @@
 import bcrypt from "bcryptjs";
 import { NextResponse } from "next/server";
-import {
-  generateSessionToken,
-  getSessionDuration,
-  setSessionCookie,
-} from "@/lib/auth";
+import { createSession, getClientInfo } from "@/lib/auth";
 import { CustomerRow, ensureAuthTables, getPool } from "@/lib/db";
 
 export async function POST(request: Request) {
@@ -49,18 +45,7 @@ export async function POST(request: Request) {
       );
     }
 
-    const token = generateSessionToken();
-    const maxAge = getSessionDuration(rememberMe);
-
-    await getPool().query(
-      `
-        INSERT INTO customer_sessions (customer_id, session_token, remember_me, expires_at)
-        VALUES ($1, $2, $3, NOW() + ($4 || ' seconds')::interval);
-      `,
-      [customer.id, token, rememberMe, maxAge ?? 60 * 60 * 8],
-    );
-
-    await setSessionCookie(token, rememberMe);
+    await createSession(customer.id, rememberMe, getClientInfo(request));
 
     return NextResponse.json({
       customer: { id: customer.id, name: customer.name, email: customer.email },
