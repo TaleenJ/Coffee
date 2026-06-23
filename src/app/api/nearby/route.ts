@@ -31,6 +31,24 @@ function imageUrlFromTags(tags: Record<string, string> = {}): string | undefined
     return undefined;
 }
 
+// Chains we deliberately exclude from results. Matched against name/brand/
+// operator so renamed-but-branded locations are still caught.
+const EXCLUDED_CHAINS = ["starbucks"];
+
+function isExcludedChain(tags: Record<string, string> = {}): boolean {
+    const haystack = [
+        tags.name,
+        tags.brand,
+        tags["brand:en"],
+        tags.operator,
+    ]
+        .filter(Boolean)
+        .join(" ")
+        .toLowerCase();
+
+    return EXCLUDED_CHAINS.some((chain) => haystack.includes(chain));
+}
+
 // Assemble the best address we can from whatever addr:* tags OSM provides.
 // Returns "" when the node has no usable address tags (handled downstream by an
 // on-demand reverse-geocode in the detail sheet).
@@ -88,9 +106,20 @@ export async function GET(request: Request) {
     const lat = Number(searchParams.get("lat"));
     const lng = Number(searchParams.get("lng"));
     const radiusMiles = Number(searchParams.get("radius") ?? "5");
+    const limit = Math.min(
+        Math.max(Number(searchParams.get("limit") ?? "30"), 1),
+        100,
+    );
 
-    if (Number.isNaN(lat) || Number.isNaN(lng)) {
-        return Response.json({ error: "lat and lng are required" }, { status: 400 });
+    if (
+        !Number.isFinite(lat) ||
+        !Number.isFinite(lng) ||
+        lat < -90 ||
+        lat > 90 ||
+        lng < -180 ||
+        lng > 180
+    ) {
+        return Response.json({ error: "valid lat and lng are required" }, { status: 400 });
     }
 
     const radiusMeters = Math.round(radiusMiles * 1609.344);
@@ -153,6 +182,7 @@ export async function GET(request: Request) {
             if (shopLat === undefined || shopLng === undefined) return null;
 
             const tags = el.tags ?? {};
+            if (isExcludedChain(tags)) return null;
 
             return {
                 id: String(el.id),
@@ -169,7 +199,7 @@ export async function GET(request: Request) {
         })
         .filter((shop): shop is NonNullable<typeof shop> => shop !== null)
         .sort((a, b) => a.distanceMiles - b.distanceMiles)
-        .slice(0, 30);
+        .slice(0, limit);
 
     return Response.json({ shops });
 }
