@@ -2,11 +2,15 @@ import Link from "next/link";
 
 type BottomNavProps = {
   active?: "map" | "nearby" | "account";
+  position?: "top" | "bottom";
 };
 
-export default function BottomNav({ active }: BottomNavProps) {
+export default function BottomNav({ active, position = "bottom" }: BottomNavProps) {
   return (
-    <nav className="bottom-bar" aria-label="Navigation">
+    <nav
+      className={position === "top" ? "top-bar" : "bottom-bar"}
+      aria-label="Navigation"
+    >
       <Link
         href="/map"
         className={`nav-btn nav-link${active === "map" ? " nav-btn-active" : ""}`}

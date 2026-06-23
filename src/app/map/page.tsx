@@ -3,6 +3,7 @@
 import dynamic from "next/dynamic";
 import { FormEvent, useState } from "react";
 import BottomNav from "@/components/BottomNav";
+import { saveLastLocation } from "@/lib/lastLocation";
 
 const RadiusMap = dynamic(() => import("@/components/RadiusMap"), {
   ssr: false,
@@ -35,6 +36,14 @@ export default function MapPage() {
       }
 
       setLocation({
+        lat: data.lat,
+        lng: data.lng,
+        zip: data.zip,
+        displayName: data.displayName,
+      });
+
+      // Remember this for the "what's nearby" page during this session.
+      saveLastLocation({
         lat: data.lat,
         lng: data.lng,
         zip: data.zip,
