@@ -16,6 +16,9 @@ export type CoffeeShop = {
     lat?: number;
     lng?: number;
     vibes: Vibe[];
+    imageUrl?: string;
+    phone?: string;
+    openingHours?: string;
 };
 
 // A shop as stored/restored from favorites. Looser than CoffeeShop because
@@ -30,7 +33,31 @@ export type FavoriteShop = {
     lat?: number;
     lng?: number;
     vibes: string[];
+    imageUrl?: string;
+    phone?: string;
+    openingHours?: string;
 };
+
+// Free, ambient coffee photos (Unsplash CDN) used when a shop has no real OSM
+// photo. These are NOT the actual shop — just attractive filler so cards look
+// good. A shop's real `imageUrl` always takes priority over these.
+export const STOCK_SHOP_IMAGES: string[] = [
+    "https://images.unsplash.com/photo-1501339847302-ac426a4a7cbb?auto=format&fit=crop&w=200&q=60",
+    "https://images.unsplash.com/photo-1554118811-1e0d58224f24?auto=format&fit=crop&w=200&q=60",
+    "https://images.unsplash.com/photo-1453614512568-c4024d13c247?auto=format&fit=crop&w=200&q=60",
+    "https://images.unsplash.com/photo-1442512595331-e89e73853f31?auto=format&fit=crop&w=200&q=60",
+    "https://images.unsplash.com/photo-1559496417-e7f25cb247f3?auto=format&fit=crop&w=200&q=60",
+    "https://images.unsplash.com/photo-1521017432531-fbd92d768814?auto=format&fit=crop&w=200&q=60",
+];
+
+// Deterministic pick so a given shop always shows the same stock photo.
+export function stockImageForId(id: string): string {
+    let hash = 0;
+    for (let i = 0; i < id.length; i++) {
+        hash = (hash * 31 + id.charCodeAt(i)) | 0;
+    }
+    return STOCK_SHOP_IMAGES[Math.abs(hash) % STOCK_SHOP_IMAGES.length];
+}
 
 export const ALL_VIBES: Vibe[] = [
     "Cozy",

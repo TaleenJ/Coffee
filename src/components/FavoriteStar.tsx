@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, type MouseEvent } from "react";
 import type { FavoriteShop } from "@/lib/coffeeShops";
 import { useFavorites } from "@/components/FavoritesProvider";
 
@@ -9,7 +9,9 @@ export default function FavoriteStar({ shop }: { shop: FavoriteShop }) {
   const active = isFavorite(shop.id);
   const [splash, setSplash] = useState(false);
 
-  function handleClick() {
+  function handleClick(event: MouseEvent<HTMLButtonElement>) {
+    // Don't let a star tap open the shop detail sheet behind it.
+    event.stopPropagation();
     // Only splash when turning a favorite ON.
     if (!active) {
       setSplash(true);

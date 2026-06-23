@@ -39,9 +39,16 @@ CREATE TABLE IF NOT EXISTS customer_favorites (
   distance_miles DOUBLE PRECISION,
   rating DOUBLE PRECISION,
   vibes TEXT[] NOT NULL DEFAULT '{}',
+  image_url TEXT,
+  phone TEXT,
+  opening_hours TEXT,
   created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   UNIQUE (customer_id, osm_id)
 );
+
+ALTER TABLE customer_favorites ADD COLUMN IF NOT EXISTS image_url TEXT;
+ALTER TABLE customer_favorites ADD COLUMN IF NOT EXISTS phone TEXT;
+ALTER TABLE customer_favorites ADD COLUMN IF NOT EXISTS opening_hours TEXT;
 
 CREATE INDEX IF NOT EXISTS idx_customer_favorites_customer
   ON customer_favorites(customer_id);

@@ -10,6 +10,50 @@ type OverpassResponse = {
     elements: OverpassElement[];
 };
 
+function imageUrlFromTags(tags: Record<string, string> = {}): string | undefined {
+    // A direct image URL on the OSM object (upgrade http -> https to avoid
+    // mixed-content blocking on our https site).
+    const direct = tags.image;
+    if (direct && /^https?:\/\//i.test(direct)) {
+        return direct.replace(/^http:\/\//i, "https://");
+    }
+
+    // A Wikimedia Commons file, e.g. "File:Some Cafe.jpg". Special:FilePath
+    // resolves the filename to the actual image and supports a width thumbnail.
+    const commons = tags.wikimedia_commons;
+    if (commons?.startsWith("File:")) {
+        const filename = commons.slice("File:".length);
+        return `https://commons.wikimedia.org/wiki/Special:FilePath/${encodeURIComponent(
+            filename,
+        )}?width=600`;
+    }
+
+    return undefined;
+}
+
+// Assemble the best address we can from whatever addr:* tags OSM provides.
+// Returns "" when the node has no usable address tags (handled downstream by an
+// on-demand reverse-geocode in the detail sheet).
+function buildAddress(tags: Record<string, string> = {}): string {
+    if (tags["addr:full"]) return tags["addr:full"];
+
+    const street = [tags["addr:housenumber"], tags["addr:street"]]
+        .filter(Boolean)
+        .join(" ");
+
+    const locality =
+        tags["addr:city"] ??
+        tags["addr:town"] ??
+        tags["addr:village"] ??
+        tags["addr:suburb"] ??
+        tags["addr:place"] ??
+        "";
+
+    const cityState = [locality, tags["addr:state"]].filter(Boolean).join(", ");
+
+    return [street, cityState, tags["addr:postcode"]].filter(Boolean).join(", ");
+}
+
 function inferVibes(tags: Record<string, string> = {}): string[] {
     const vibes: string[] = [];
 
@@ -116,10 +160,11 @@ export async function GET(request: Request) {
                 lat: shopLat,
                 lng: shopLng,
                 distanceMiles: haversineMiles(lat, lng, shopLat, shopLng),
-                address: [tags["addr:housenumber"], tags["addr:street"]]
-                    .filter(Boolean)
-                    .join(" ") || "Address unavailable",
+                address: buildAddress(tags),
                 vibes: inferVibes(tags),
+                imageUrl: imageUrlFromTags(tags),
+                phone: tags.phone ?? tags["contact:phone"] ?? undefined,
+                openingHours: tags.opening_hours ?? undefined,
             };
         })
         .filter((shop): shop is NonNullable<typeof shop> => shop !== null)

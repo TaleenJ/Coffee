@@ -10,6 +10,9 @@ type FavoriteRow = {
   distance_miles: number | null;
   rating: number | null;
   vibes: string[] | null;
+  image_url: string | null;
+  phone: string | null;
+  opening_hours: string | null;
 };
 
 function rowToShop(row: FavoriteRow): FavoriteShop {
@@ -22,13 +25,16 @@ function rowToShop(row: FavoriteRow): FavoriteShop {
     distanceMiles: row.distance_miles ?? undefined,
     rating: row.rating ?? undefined,
     vibes: row.vibes ?? [],
+    imageUrl: row.image_url ?? undefined,
+    phone: row.phone ?? undefined,
+    openingHours: row.opening_hours ?? undefined,
   };
 }
 
 export async function listFavorites(customerId: string): Promise<FavoriteShop[]> {
   const result = await getPool().query<FavoriteRow>(
     `
-      SELECT osm_id, name, address, lat, lng, distance_miles, rating, vibes
+      SELECT osm_id, name, address, lat, lng, distance_miles, rating, vibes, image_url, phone, opening_hours
       FROM customer_favorites
       WHERE customer_id = $1
       ORDER BY created_at DESC;
@@ -46,8 +52,8 @@ export async function addFavorite(
   await getPool().query(
     `
       INSERT INTO customer_favorites
-        (customer_id, osm_id, name, address, lat, lng, distance_miles, rating, vibes)
-      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
+        (customer_id, osm_id, name, address, lat, lng, distance_miles, rating, vibes, image_url, phone, opening_hours)
+      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)
       ON CONFLICT (customer_id, osm_id) DO NOTHING;
     `,
     [
@@ -60,6 +66,9 @@ export async function addFavorite(
       shop.distanceMiles ?? null,
       shop.rating ?? null,
       shop.vibes ?? [],
+      shop.imageUrl ?? null,
+      shop.phone ?? null,
+      shop.openingHours ?? null,
     ],
   );
 }

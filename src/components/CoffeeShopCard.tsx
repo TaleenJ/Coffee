@@ -1,7 +1,17 @@
-import type { FavoriteShop } from "@/lib/coffeeShops";
+"use client";
+
+import type { KeyboardEvent } from "react";
+import { stockImageForId, type FavoriteShop } from "@/lib/coffeeShops";
 import FavoriteStar from "@/components/FavoriteStar";
+import ShopImage from "@/components/ShopImage";
+import { useShopDetail } from "@/components/ShopDetailProvider";
 
 export default function CoffeeShopCard({ shop }: { shop: FavoriteShop }) {
+    const { openShop } = useShopDetail();
+
+    // Real OSM photo wins; otherwise a consistent ambient coffee photo.
+    const imageSrc = shop.imageUrl ?? stockImageForId(shop.id);
+
     const metaParts: string[] = [];
     if (shop.distanceMiles !== undefined) {
         metaParts.push(`${shop.distanceMiles.toFixed(1)} mi`);
@@ -10,15 +20,37 @@ export default function CoffeeShopCard({ shop }: { shop: FavoriteShop }) {
         metaParts.push(`⭐ ${shop.rating.toFixed(1)}`);
     }
 
+    const hasAddress =
+        !!shop.address &&
+        shop.address.trim() !== "" &&
+        shop.address !== "Address unavailable";
+
+    function handleKeyDown(event: KeyboardEvent<HTMLElement>) {
+        if (event.key === "Enter" || event.key === " ") {
+            event.preventDefault();
+            openShop(shop);
+        }
+    }
+
     return (
-        <article className="shop-card">
+        <article
+            className="shop-card"
+            role="button"
+            tabIndex={0}
+            aria-label={`View details for ${shop.name}`}
+            onClick={() => openShop(shop)}
+            onKeyDown={handleKeyDown}
+        >
             <FavoriteStar shop={shop} />
-            <div className="shop-card-main">
-                <h3 className="shop-name">{shop.name}</h3>
-                {metaParts.length > 0 && (
-                    <p className="shop-meta">{metaParts.join(" · ")}</p>
-                )}
-                <p className="shop-address">{shop.address}</p>
+            <div className="shop-card-body">
+                <ShopImage src={imageSrc} alt={shop.name} />
+                <div className="shop-card-main">
+                    <h3 className="shop-name">{shop.name}</h3>
+                    {metaParts.length > 0 && (
+                        <p className="shop-meta">{metaParts.join(" · ")}</p>
+                    )}
+                    {hasAddress && <p className="shop-address">{shop.address}</p>}
+                </div>
             </div>
             <div className="shop-vibes">
                 {shop.vibes.map((vibe) => (

@@ -105,9 +105,23 @@ export async function ensureAuthTables() {
       distance_miles DOUBLE PRECISION,
       rating DOUBLE PRECISION,
       vibes TEXT[] NOT NULL DEFAULT '{}',
+      image_url TEXT,
+      phone TEXT,
+      opening_hours TEXT,
       created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
       UNIQUE (customer_id, osm_id)
     );
+  `);
+
+  // Backfill for databases that created the favorites table before these columns existed.
+  await pool.query(`
+    ALTER TABLE customer_favorites ADD COLUMN IF NOT EXISTS image_url TEXT;
+  `);
+  await pool.query(`
+    ALTER TABLE customer_favorites ADD COLUMN IF NOT EXISTS phone TEXT;
+  `);
+  await pool.query(`
+    ALTER TABLE customer_favorites ADD COLUMN IF NOT EXISTS opening_hours TEXT;
   `);
 
   await pool.query(`

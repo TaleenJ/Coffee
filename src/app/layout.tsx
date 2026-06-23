@@ -1,5 +1,6 @@
 import "./globals.css";
 import FavoritesProvider from "@/components/FavoritesProvider";
+import ShopDetailProvider from "@/components/ShopDetailProvider";
 
 export default function RootLayout({
   children,
@@ -9,7 +10,9 @@ export default function RootLayout({
   return (
     <html lang="en">
       <body>
-        <FavoritesProvider>{children}</FavoritesProvider>
+        <FavoritesProvider>
+          <ShopDetailProvider>{children}</ShopDetailProvider>
+        </FavoritesProvider>
       </body>
     </html>
   );
