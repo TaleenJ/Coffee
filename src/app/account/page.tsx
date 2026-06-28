@@ -4,7 +4,7 @@ import LogoutButton from "@/components/LogoutButton";
 import { getCurrentCustomer } from "@/lib/auth";
 import { ensureAuthTables } from "@/lib/db";
 
-const accountItems = ["Payment Methods", "Settings"];
+const accountItems = ["Payment Methods"];
 
 export default async function AccountGuestPage() {
   await ensureAuthTables();
@@ -37,6 +37,12 @@ export default async function AccountGuestPage() {
                   {item}
                 </button>
               ))}
+              <Link
+                href="/account/delete"
+                className="account-list-item account-list-item-danger"
+              >
+                Delete account
+              </Link>
             </div>
 
             <LogoutButton />

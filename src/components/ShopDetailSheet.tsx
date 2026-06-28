@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState, type TouchEvent } from "react";
 import type { FavoriteShop } from "@/lib/coffeeShops";
 import { formatOpeningHours } from "@/lib/openingHours";
+import { availableMenuForShop } from "@/lib/menu";
 import OrderModal from "@/components/OrderModal";
 import ShopReviews from "@/components/ShopReviews";
 
@@ -36,6 +37,7 @@ export default function ShopDetailSheet({
   const [resolving, setResolving] = useState(false);
   const [ordering, setOrdering] = useState(false);
   const [showMapChoice, setShowMapChoice] = useState(false);
+  const [showMenu, setShowMenu] = useState(false);
   const startY = useRef<number | null>(null);
 
   // Reset transient UI and, when a shop lacks an address, reverse-geocode its
@@ -47,6 +49,7 @@ export default function ShopDetailSheet({
     setResolving(false);
     setOrdering(false);
     setShowMapChoice(false);
+    setShowMenu(false);
 
     if (!shop || hasRealAddress(shop.address)) return;
     if (shop.lat === undefined || shop.lng === undefined) return;
@@ -72,6 +75,7 @@ export default function ShopDetailSheet({
 
   if (!shop) return null;
 
+  const menu = availableMenuForShop(shop.id);
   const hoursLines = formatOpeningHours(shop.openingHours);
   const hasCoords = shop.lat !== undefined && shop.lng !== undefined;
   const coordsText = hasCoords
@@ -191,10 +195,25 @@ export default function ShopDetailSheet({
           <button
             type="button"
             className={`detail-btn${showMapChoice ? " detail-btn-active" : ""}`}
-            onClick={() => setShowMapChoice((v) => !v)}
+            onClick={() => {
+              setShowMapChoice((v) => !v);
+              setShowMenu(false);
+            }}
             aria-expanded={showMapChoice}
           >
             Map
+          </button>
+
+          <button
+            type="button"
+            className={`detail-btn${showMenu ? " detail-btn-active" : ""}`}
+            onClick={() => {
+              setShowMenu((v) => !v);
+              setShowMapChoice(false);
+            }}
+            aria-expanded={showMenu}
+          >
+            Menu
           </button>
 
           <button
@@ -205,6 +224,17 @@ export default function ShopDetailSheet({
             Order
           </button>
         </div>
+
+        {showMenu && (
+          <div className="detail-menu">
+            {menu.map((item) => (
+              <div key={item.id} className="detail-menu-row">
+                <span className="detail-menu-name">{item.name}</span>
+                <span className="detail-menu-price">${item.price.toFixed(2)}</span>
+              </div>
+            ))}
+          </div>
+        )}
 
         {showMapChoice && (
           <div className="map-choice" role="menu">

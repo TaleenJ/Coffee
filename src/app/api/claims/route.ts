@@ -41,21 +41,29 @@ export async function POST(request: Request) {
     );
   }
 
-  await ensureAuthTables();
-  const result = await createClaim(customer.id, {
-    osmId,
-    shopName,
-    phone: body.phone?.trim() || null,
-  });
+  try {
+    await ensureAuthTables();
+    const result = await createClaim(customer.id, {
+      osmId,
+      shopName,
+      phone: body.phone?.trim() || null,
+    });
 
-  if (!result.ok) {
-    return NextResponse.json({ error: result.error }, { status: result.status });
+    if (!result.ok) {
+      return NextResponse.json({ error: result.error }, { status: result.status });
+    }
+
+    return NextResponse.json({
+      claim: result.claim,
+      // Simulated SMS: in production this code would be texted, not returned.
+      demoCode: result.demoCode,
+      needsManual: result.needsManual,
+    });
+  } catch (err) {
+    console.error("Failed to create claim:", err);
+    return NextResponse.json(
+      { error: "Couldn't claim that shop. Please try again." },
+      { status: 500 },
+    );
   }
-
-  return NextResponse.json({
-    claim: result.claim,
-    // Simulated SMS: in production this code would be texted, not returned.
-    demoCode: result.demoCode,
-    needsManual: result.needsManual,
-  });
 }

@@ -309,6 +309,19 @@ function timeAgo(iso: string): string {
   return `${Math.floor(mins / 60)}h ago`;
 }
 
+function formatWhen(iso: string): string {
+  try {
+    return new Date(iso).toLocaleString(undefined, {
+      month: "short",
+      day: "numeric",
+      hour: "numeric",
+      minute: "2-digit",
+    });
+  } catch {
+    return "";
+  }
+}
+
 function OrdersBoard({ shopName }: { shopName: string }) {
   const [orders, setOrders] = useState<Order[]>([]);
   const [loaded, setLoaded] = useState(false);
@@ -402,6 +415,7 @@ function OrdersBoard({ shopName }: { shopName: string }) {
               </div>
 
               <p className="order-card-customer">{order.customerName}</p>
+              <span className="order-card-when">{formatWhen(order.createdAt)}</span>
 
               <ul className="order-card-items">
                 {order.items.map((item, i) => (

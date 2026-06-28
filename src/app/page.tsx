@@ -6,7 +6,7 @@ import CoffeeShopCard from "@/components/CoffeeShopCard";
 import FilterSheet from "@/components/FilterSheet";
 import { CoffeeShop, Vibe } from "@/lib/coffeeShops";
 import { availableDrinkIdsForShop, shopHasPromo, shopHasVegan } from "@/lib/menu";
-import { readLastLocation, type SavedLocation } from "@/lib/lastLocation";
+import { readLastLocation, saveLastLocation, type SavedLocation } from "@/lib/lastLocation";
 
 export default function HomePage() {
   const [filtersOpen, setFiltersOpen] = useState(false);
@@ -23,6 +23,10 @@ export default function HomePage() {
   const [activeZip, setActiveZip] = useState<string | null>(null);
   const [savedLocation, setSavedLocation] = useState<SavedLocation | null>(null);
   const [locationMode, setLocationMode] = useState<"saved" | "current">("current");
+  const [searchOpen, setSearchOpen] = useState(false);
+  const [searchQuery, setSearchQuery] = useState("");
+  const [searching, setSearching] = useState(false);
+  const [searchError, setSearchError] = useState("");
 
   const loadNearby = useCallback(async (lat: number, lng: number) => {
     setStatus("loading");
@@ -128,6 +132,47 @@ export default function HomePage() {
     }
   }
 
+  function handleGlassClick() {
+    // Once a second location has been searched, the glass simply toggles between
+    // it and the current location. Before that, it prompts for one.
+    if (savedLocation) {
+      toggleLocationMode();
+    } else {
+      setSearchError("");
+      setSearchOpen((open) => !open);
+    }
+  }
+
+  async function runLocationSearch() {
+    const q = searchQuery.trim();
+    if (!q) return;
+    setSearching(true);
+    setSearchError("");
+    try {
+      const res = await fetch(`/api/geocode?q=${encodeURIComponent(q)}`);
+      const data = await res.json();
+      if (!res.ok) {
+        setSearchError(data.error ?? "Couldn't find that location.");
+        return;
+      }
+      const loc: SavedLocation = {
+        lat: data.lat,
+        lng: data.lng,
+        zip: data.label,
+        displayName: data.displayName,
+      };
+      setSavedLocation(loc);
+      saveLastLocation(loc);
+      setSearchOpen(false);
+      setSearchQuery("");
+      loadSavedLocation(loc);
+    } catch {
+      setSearchError("Search failed. Try again.");
+    } finally {
+      setSearching(false);
+    }
+  }
+
   function toggleVibe(vibe: Vibe) {
     setSelectedVibes((prev) =>
       prev.includes(vibe) ? prev.filter((v) => v !== vibe) : [...prev, vibe],
@@ -174,26 +219,30 @@ export default function HomePage() {
       <header className="home-header">
         <h1 className="home-title">What&apos;s nearby</h1>
         <div className="home-header-actions">
-          {savedLocation && (
-            <button
-              type="button"
-              className={`icon-btn${locationMode === "saved" ? " icon-btn-active" : ""}`}
-              onClick={toggleLocationMode}
-              aria-pressed={locationMode === "saved"}
-              aria-label={
-                locationMode === "saved"
+          <button
+            type="button"
+            className={`icon-btn${
+              savedLocation && locationMode === "saved" ? " icon-btn-active" : ""
+            }${searchOpen ? " icon-btn-active" : ""}`}
+            onClick={handleGlassClick}
+            aria-pressed={savedLocation ? locationMode === "saved" : searchOpen}
+            aria-label={
+              savedLocation
+                ? locationMode === "saved"
                   ? `Showing your saved search (${savedLocation.zip}). Switch to your current location.`
                   : "Showing your current location. Switch to your saved search."
-              }
-              title={
-                locationMode === "saved"
+                : "Search another location to compare with your current location."
+            }
+            title={
+              savedLocation
+                ? locationMode === "saved"
                   ? `Saved search: ${savedLocation.zip} — tap for current location`
                   : "Current location — tap for saved search"
-              }
-            >
-              <span aria-hidden="true">🔍</span>
-            </button>
-          )}
+                : "Search another location"
+            }
+          >
+            <span aria-hidden="true">🔍</span>
+          </button>
           <button
             type="button"
             className={`filters-btn${activeFilterCount ? " filters-btn-active" : ""}`}
@@ -203,6 +252,39 @@ export default function HomePage() {
           </button>
         </div>
       </header>
+
+      {searchOpen && !savedLocation && (
+        <div className="location-search">
+          <input
+            className="location-search-input"
+            placeholder="Search another location (zip or city)"
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === "Enter") void runLocationSearch();
+            }}
+            // eslint-disable-next-line jsx-a11y/no-autofocus
+            autoFocus
+          />
+          <button
+            type="button"
+            className="location-search-btn"
+            onClick={runLocationSearch}
+            disabled={searching || searchQuery.trim() === ""}
+          >
+            {searching ? "…" : "Search"}
+          </button>
+          <button
+            type="button"
+            className="location-search-cancel"
+            onClick={() => setSearchOpen(false)}
+            aria-label="Cancel search"
+          >
+            ✕
+          </button>
+        </div>
+      )}
+      {searchError && <p className="location-search-error">{searchError}</p>}
 
       <BottomNav active="nearby" position="top" />
 

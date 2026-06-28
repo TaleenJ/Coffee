@@ -76,14 +76,18 @@ export async function createClaim(
   const hasPhone = !!input.phone && input.phone.trim() !== "";
   const code = hasPhone ? generateCode() : null;
 
+  // CODE_TTL_MINUTES is a trusted integer constant, so it's safe to inline.
+  // (Passing it as a bound param and concatenating — `$6 || ' minutes'` — makes
+  // Postgres see `unknown || unknown` and fail to resolve the operator, which
+  // throws on every insert.)
   const upserted = await pool.query<ClaimRow>(
     `
       INSERT INTO shop_claims
         (owner_id, osm_id, shop_name, phone, status, verify_code, verify_expires_at)
       VALUES (
         $1, $2, $3, $4, 'pending', $5,
-        CASE WHEN $5 IS NULL THEN NULL
-             ELSE NOW() + ($6 || ' minutes')::interval END
+        CASE WHEN $5::text IS NULL THEN NULL
+             ELSE NOW() + INTERVAL '${CODE_TTL_MINUTES} minutes' END
       )
       ON CONFLICT (osm_id) DO UPDATE SET
         shop_name = EXCLUDED.shop_name,
@@ -92,7 +96,7 @@ export async function createClaim(
         verify_expires_at = EXCLUDED.verify_expires_at
       RETURNING id, osm_id, shop_name, phone, status, created_at, verified_at;
     `,
-    [ownerId, input.osmId, input.shopName, input.phone, code, CODE_TTL_MINUTES],
+    [ownerId, input.osmId, input.shopName, input.phone, code],
   );
 
   return {

@@ -129,6 +129,18 @@ export async function listMyOrders(customerId: string): Promise<Order[]> {
   return result.rows.map(rowToOrder);
 }
 
+/** Remove an order from a customer's own history. Scoped to the owning customer. */
+export async function deleteMyOrder(
+  customerId: string,
+  orderId: string,
+): Promise<boolean> {
+  const result = await getPool().query(
+    `DELETE FROM orders WHERE id = $1 AND customer_id = $2;`,
+    [orderId, customerId],
+  );
+  return (result.rowCount ?? 0) > 0;
+}
+
 export type UpdateStatusResult =
   | { ok: true; order: Order }
   | { ok: false; error: string; status: number };

@@ -1,9 +1,11 @@
 "use client";
 
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
 import type { FavoriteShop } from "@/lib/coffeeShops";
 import { availableMenuForShop, cartTotal, type OrderItem } from "@/lib/menu";
+import { PENDING_ORDER_KEY, type PendingOrder } from "@/lib/checkout";
 
 type AuthState = "checking" | "guest" | "user";
 
@@ -14,12 +16,10 @@ export default function OrderModal({
   shop: FavoriteShop;
   onClose: () => void;
 }) {
+  const router = useRouter();
   const [auth, setAuth] = useState<AuthState>("checking");
   const [qty, setQty] = useState<Record<string, number>>({});
   const [note, setNote] = useState("");
-  const [placing, setPlacing] = useState(false);
-  const [error, setError] = useState("");
-  const [placed, setPlaced] = useState(false);
 
   const menu = useMemo(() => availableMenuForShop(shop.id), [shop.id]);
 
@@ -60,32 +60,22 @@ export default function OrderModal({
     });
   }
 
-  async function placeOrder() {
+  function goToPayment() {
     if (items.length === 0) return;
-    setPlacing(true);
-    setError("");
+    const pending: PendingOrder = {
+      osmId: shop.id,
+      shopName: shop.name,
+      items,
+      note,
+      total,
+    };
     try {
-      const res = await fetch("/api/orders", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          osmId: shop.id,
-          shopName: shop.name,
-          items: items.map((i) => ({ id: i.id, qty: i.qty })),
-          note,
-        }),
-      });
-      const data = await res.json();
-      if (!res.ok) {
-        setError(data.error ?? "Could not place order.");
-        return;
-      }
-      setPlaced(true);
+      sessionStorage.setItem(PENDING_ORDER_KEY, JSON.stringify(pending));
     } catch {
-      setError("Could not place order.");
-    } finally {
-      setPlacing(false);
+      /* sessionStorage may be unavailable; checkout will handle the empty case */
     }
+    onClose();
+    router.push("/checkout");
   }
 
   return (
@@ -122,20 +112,7 @@ export default function OrderModal({
           </div>
         )}
 
-        {auth === "user" && placed && (
-          <div className="order-success">
-            <p className="order-success-icon" aria-hidden="true">✅</p>
-            <p className="order-success-title">Order placed!</p>
-            <p className="order-success-sub">
-              {shop.name} got your order. Track it in your orders.
-            </p>
-            <Link href="/account/orders" className="detail-btn detail-btn-primary">
-              Track my order
-            </Link>
-          </div>
-        )}
-
-        {auth === "user" && !placed && (
+        {auth === "user" && (
           <>
             <div className="order-menu">
               {menu.map((item) => (
@@ -177,19 +154,15 @@ export default function OrderModal({
               onChange={(e) => setNote(e.target.value)}
             />
 
-            {error && <p className="account-error">{error}</p>}
-
             <button
               type="button"
               className="detail-btn detail-btn-primary order-place-btn"
-              onClick={placeOrder}
-              disabled={count === 0 || placing}
+              onClick={goToPayment}
+              disabled={count === 0}
             >
-              {placing
-                ? "Placing…"
-                : count === 0
-                  ? "Add items to order"
-                  : `Place order · ${count} item${count === 1 ? "" : "s"} · $${total.toFixed(2)}`}
+              {count === 0
+                ? "Add items to order"
+                : `Continue to payment · ${count} item${count === 1 ? "" : "s"} · $${total.toFixed(2)}`}
             </button>
           </>
         )}

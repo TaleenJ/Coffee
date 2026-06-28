@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { getCurrentCustomer } from "@/lib/auth";
 import { ensureAuthTables } from "@/lib/db";
-import { updateOrderStatus, type OrderStatus } from "@/lib/orders";
+import { deleteMyOrder, updateOrderStatus, type OrderStatus } from "@/lib/orders";
 
 const ALLOWED: OrderStatus[] = [
   "new",
@@ -41,4 +41,24 @@ export async function PATCH(
   }
 
   return NextResponse.json({ order: result.order });
+}
+
+export async function DELETE(
+  _request: Request,
+  { params }: { params: Promise<{ id: string }> },
+) {
+  const customer = await getCurrentCustomer();
+  if (!customer) {
+    return NextResponse.json({ error: "Not signed in." }, { status: 401 });
+  }
+
+  const { id } = await params;
+
+  await ensureAuthTables();
+  const removed = await deleteMyOrder(customer.id, id);
+  if (!removed) {
+    return NextResponse.json({ error: "Order not found." }, { status: 404 });
+  }
+
+  return NextResponse.json({ ok: true });
 }

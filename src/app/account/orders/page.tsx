@@ -30,6 +30,19 @@ function stepIndex(status: OrderStatus): number {
   return i === -1 ? 0 : i;
 }
 
+function formatWhen(iso: string): string {
+  try {
+    return new Date(iso).toLocaleString(undefined, {
+      month: "short",
+      day: "numeric",
+      hour: "numeric",
+      minute: "2-digit",
+    });
+  } catch {
+    return "";
+  }
+}
+
 export default function MyOrdersPage() {
   const [state, setState] = useState<LoadState>("loading");
   const [orders, setOrders] = useState<Order[]>([]);
@@ -55,6 +68,16 @@ export default function MyOrdersPage() {
     return () => window.clearInterval(id);
   }, [fetchOrders]);
 
+  const removeOrder = useCallback(async (orderId: string) => {
+    // Optimistically drop it; the 3s poll will reconcile if the call fails.
+    setOrders((prev) => prev.filter((o) => o.id !== orderId));
+    try {
+      await fetch(`/api/orders/${orderId}`, { method: "DELETE" });
+    } catch {
+      void fetchOrders();
+    }
+  }, [fetchOrders]);
+
   return (
     <div className="page">
       <main className="scroll-area account-main" aria-label="My orders">
@@ -72,9 +95,7 @@ export default function MyOrdersPage() {
         )}
 
         {state === "ready" && orders.length === 0 && (
-          <p className="order-status-msg">
-            No orders yet. Find a shop and place your first order. ☕
-          </p>
+          <p className="order-status-msg">No current orders.</p>
         )}
 
         {state === "ready" && orders.length > 0 && (
@@ -84,6 +105,15 @@ export default function MyOrdersPage() {
               const active = stepIndex(order.status);
               return (
                 <article key={order.id} className="myorder-card">
+                  <button
+                    type="button"
+                    className="myorder-remove"
+                    onClick={() => removeOrder(order.id)}
+                    aria-label={`Remove order from ${order.shopName}`}
+                    title="Remove from history"
+                  >
+                    ✕
+                  </button>
                   <div className="myorder-head">
                     <span className="myorder-shop">{order.shopName}</span>
                     <span className="myorder-total">${order.total.toFixed(2)}</span>
@@ -92,6 +122,10 @@ export default function MyOrdersPage() {
                   <p className="myorder-items">
                     {order.items.map((i) => `${i.qty}× ${i.name}`).join(", ")}
                   </p>
+
+                  <span className="myorder-time">
+                    Ordered {formatWhen(order.createdAt)}
+                  </span>
 
                   {cancelled ? (
                     <p className="myorder-cancelled">Cancelled</p>
