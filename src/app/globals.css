@@ -81,7 +81,8 @@ body {
 
 .nav-btn-active {
   border-color: #6b5344;
-  background: #d8cec2;
+  background: #6b5344;
+  color: #fff;
 }
 
 .map-page {
@@ -280,10 +281,6 @@ body {
 .filters-btn-active {
   border-color: #6b5344;
   background: #6b5344;
-  color: #fff;
-}
-
-.icon-btn-active {
   color: #fff;
 }
 
