@@ -1267,6 +1267,30 @@ body {
   justify-content: space-between;
 }
 
+.board-tabs {
+  display: flex;
+  gap: 8px;
+  margin: 12px 0 4px;
+}
+
+.board-tab {
+  flex: 1;
+  height: 38px;
+  border: 1.5px solid #c9bdb0;
+  border-radius: 10px;
+  background: #fff;
+  color: #6b5344;
+  font-weight: 600;
+  font-size: 0.88rem;
+  cursor: pointer;
+}
+
+.board-tab-active {
+  background: #6b5344;
+  border-color: #6b5344;
+  color: #fff;
+}
+
 .board-shop {
   font-size: 1.1rem;
   font-weight: 700;
@@ -1890,4 +1914,125 @@ body {
   margin: 0 0 0.85rem;
   font-size: 0.85rem;
   color: #8a7f73;
+}
+
+/* ---- Receipt (owner) ---- */
+.receipt-modal {
+  width: 100%;
+  max-width: 360px;
+  background: #f5f0eb;
+  border-radius: 18px;
+  padding: 16px;
+  margin: auto;
+  align-self: center;
+}
+
+.receipt-print {
+  background: #fff;
+  border-radius: 10px;
+  padding: 18px 16px;
+  font-family: "Courier New", ui-monospace, monospace;
+  color: #1f1b18;
+}
+
+.receipt-shop {
+  margin: 0;
+  text-align: center;
+  font-size: 1.05rem;
+  font-weight: 700;
+}
+
+.receipt-title {
+  margin: 2px 0 10px;
+  text-align: center;
+  font-size: 0.78rem;
+  letter-spacing: 2px;
+  color: #6b6158;
+}
+
+.receipt-meta {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  font-size: 0.74rem;
+  color: #5a4f45;
+}
+
+.receipt-divider {
+  border-top: 1px dashed #b5a89b;
+  margin: 10px 0;
+}
+
+.receipt-items {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.receipt-item {
+  display: flex;
+  justify-content: space-between;
+  font-size: 0.82rem;
+}
+
+.receipt-note {
+  margin: 8px 0 0;
+  font-size: 0.76rem;
+  color: #6b6158;
+}
+
+.receipt-total {
+  display: flex;
+  justify-content: space-between;
+  font-weight: 700;
+  font-size: 0.95rem;
+}
+
+.receipt-status {
+  margin: 8px 0 0;
+  font-size: 0.74rem;
+  color: #5a4f45;
+}
+
+.receipt-thanks {
+  margin: 10px 0 0;
+  text-align: center;
+  font-size: 0.82rem;
+}
+
+.receipt-actions {
+  display: flex;
+  gap: 10px;
+  margin-top: 14px;
+}
+
+.receipt-actions .detail-btn {
+  flex: 1;
+}
+
+@media print {
+  body * {
+    visibility: hidden !important;
+  }
+
+  .receipt-print,
+  .receipt-print * {
+    visibility: visible !important;
+  }
+
+  .receipt-print {
+    position: fixed;
+    left: 0;
+    top: 0;
+    width: 100%;
+    border-radius: 0;
+    padding: 24px;
+  }
+
+  .receipt-actions {
+    display: none !important;
+  }
 }

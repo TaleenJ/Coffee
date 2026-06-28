@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { getCurrentCustomer } from "@/lib/auth";
 import { ensureAuthTables } from "@/lib/db";
-import { listIncoming } from "@/lib/orders";
+import { listIncoming, listPastIncoming } from "@/lib/orders";
 
 export async function GET(request: Request) {
   const customer = await getCurrentCustomer();
@@ -12,10 +12,13 @@ export async function GET(request: Request) {
     return NextResponse.json({ error: "Owners only." }, { status: 403 });
   }
 
-  const activeOnly =
-    new URL(request.url).searchParams.get("all") !== "true";
+  const params = new URL(request.url).searchParams;
+  const scope = params.get("scope");
 
   await ensureAuthTables();
-  const orders = await listIncoming(customer.id, activeOnly);
+  const orders =
+    scope === "past"
+      ? await listPastIncoming(customer.id)
+      : await listIncoming(customer.id, params.get("all") !== "true");
   return NextResponse.json({ orders });
 }

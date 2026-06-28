@@ -6,6 +6,7 @@ import { useEffect, useMemo, useState } from "react";
 import type { FavoriteShop } from "@/lib/coffeeShops";
 import { availableMenuForShop, cartTotal, type OrderItem } from "@/lib/menu";
 import { PENDING_ORDER_KEY, type PendingOrder } from "@/lib/checkout";
+import { useShopDetail } from "@/components/ShopDetailProvider";
 
 type AuthState = "checking" | "guest" | "user";
 
@@ -17,6 +18,7 @@ export default function OrderModal({
   onClose: () => void;
 }) {
   const router = useRouter();
+  const { close: closeShopDetail } = useShopDetail();
   const [auth, setAuth] = useState<AuthState>("checking");
   const [qty, setQty] = useState<Record<string, number>>({});
   const [note, setNote] = useState("");
@@ -75,6 +77,8 @@ export default function OrderModal({
       /* sessionStorage may be unavailable; checkout will handle the empty case */
     }
     onClose();
+    // Dismiss the shop detail sheet entirely so its info doesn't linger over checkout.
+    closeShopDetail();
     router.push("/checkout");
   }
 

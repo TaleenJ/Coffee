@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import type { FavoriteShop } from "@/lib/coffeeShops";
 import type { OrderItem } from "@/lib/menu";
+import Receipt from "@/components/Receipt";
 
 type ClaimStatus = "pending" | "verified";
 type Claim = {
@@ -322,10 +323,16 @@ function formatWhen(iso: string): string {
   }
 }
 
+type BoardTab = "active" | "past";
+
 function OrdersBoard({ shopName }: { shopName: string }) {
+  const [tab, setTab] = useState<BoardTab>("active");
   const [orders, setOrders] = useState<Order[]>([]);
+  const [pastOrders, setPastOrders] = useState<Order[]>([]);
   const [loaded, setLoaded] = useState(false);
+  const [pastLoaded, setPastLoaded] = useState(false);
   const [updating, setUpdating] = useState<string | null>(null);
+  const [receipt, setReceipt] = useState<Order | null>(null);
   const seenIds = useRef<Set<string>>(new Set());
   const [flashIds, setFlashIds] = useState<Set<string>>(new Set());
 
@@ -360,11 +367,28 @@ function OrdersBoard({ shopName }: { shopName: string }) {
     }
   }, []);
 
+  const fetchPast = useCallback(async () => {
+    try {
+      const res = await fetch("/api/orders/incoming?scope=past");
+      if (!res.ok) return;
+      const data = await res.json();
+      setPastOrders(data.orders ?? []);
+      setPastLoaded(true);
+    } catch {
+      /* keep showing last state */
+    }
+  }, []);
+
   useEffect(() => {
     void fetchOrders();
     const id = window.setInterval(fetchOrders, 3000);
     return () => window.clearInterval(id);
   }, [fetchOrders]);
+
+  // Refresh past orders whenever that tab is shown.
+  useEffect(() => {
+    if (tab === "past") void fetchPast();
+  }, [tab, fetchPast]);
 
   async function setStatus(orderId: string, status: OrderStatus) {
     setUpdating(orderId);
@@ -375,37 +399,74 @@ function OrdersBoard({ shopName }: { shopName: string }) {
         body: JSON.stringify({ status }),
       });
       await fetchOrders();
+      // A completed/cancelled order moves to the Past tab.
+      if (status === "completed" || status === "cancelled") void fetchPast();
     } finally {
       setUpdating(null);
     }
   }
+
+  const list = tab === "active" ? orders : pastOrders;
 
   return (
     <section className="board">
       <div className="board-head">
         <div>
           <h2 className="board-shop">{shopName}</h2>
-          <p className="board-live">
-            <span className="board-live-dot" aria-hidden="true" /> Live · updates
-            every 3s
-          </p>
+          {tab === "active" ? (
+            <p className="board-live">
+              <span className="board-live-dot" aria-hidden="true" /> Live · updates
+              every 3s
+            </p>
+          ) : (
+            <p className="board-live">Completed &amp; cancelled orders</p>
+          )}
         </div>
-        <span className="board-count">{orders.length} active</span>
+        <span className="board-count">
+          {tab === "active" ? `${orders.length} active` : `${pastOrders.length} past`}
+        </span>
       </div>
 
-      {loaded && orders.length === 0 && (
+      <div className="board-tabs" role="tablist">
+        <button
+          type="button"
+          role="tab"
+          aria-selected={tab === "active"}
+          className={`board-tab${tab === "active" ? " board-tab-active" : ""}`}
+          onClick={() => setTab("active")}
+        >
+          Active
+        </button>
+        <button
+          type="button"
+          role="tab"
+          aria-selected={tab === "past"}
+          className={`board-tab${tab === "past" ? " board-tab-active" : ""}`}
+          onClick={() => setTab("past")}
+        >
+          Past orders
+        </button>
+      </div>
+
+      {tab === "active" && loaded && orders.length === 0 && (
         <p className="board-empty">
           No active orders yet. New orders will appear here automatically. ☕
         </p>
       )}
+      {tab === "past" && pastLoaded && pastOrders.length === 0 && (
+        <p className="board-empty">No past orders yet.</p>
+      )}
 
       <div className="board-list">
-        {orders.map((order) => {
+        {list.map((order) => {
           const next = NEXT[order.status];
+          const isActive = tab === "active";
           return (
             <article
               key={order.id}
-              className={`order-card${flashIds.has(order.id) ? " order-card-new" : ""}`}
+              className={`order-card${
+                isActive && flashIds.has(order.id) ? " order-card-new" : ""
+              }`}
             >
               <div className="order-card-top">
                 <span className={`status-pill status-${order.status}`}>
@@ -430,7 +491,7 @@ function OrdersBoard({ shopName }: { shopName: string }) {
               <div className="order-card-foot">
                 <span className="order-card-total">${order.total.toFixed(2)}</span>
                 <div className="order-card-actions">
-                  {next && (
+                  {isActive && next && (
                     <button
                       type="button"
                       className="board-btn board-btn-primary"
@@ -440,13 +501,22 @@ function OrdersBoard({ shopName }: { shopName: string }) {
                       {next.label}
                     </button>
                   )}
+                  {isActive && (
+                    <button
+                      type="button"
+                      className="board-btn board-btn-ghost"
+                      onClick={() => setStatus(order.id, "cancelled")}
+                      disabled={updating === order.id}
+                    >
+                      Cancel
+                    </button>
+                  )}
                   <button
                     type="button"
                     className="board-btn board-btn-ghost"
-                    onClick={() => setStatus(order.id, "cancelled")}
-                    disabled={updating === order.id}
+                    onClick={() => setReceipt(order)}
                   >
-                    Cancel
+                    Receipt
                   </button>
                 </div>
               </div>
@@ -454,6 +524,10 @@ function OrdersBoard({ shopName }: { shopName: string }) {
           );
         })}
       </div>
+
+      {receipt && (
+        <Receipt order={receipt} onClose={() => setReceipt(null)} />
+      )}
     </section>
   );
 }

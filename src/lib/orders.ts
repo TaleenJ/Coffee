@@ -10,6 +10,7 @@ export type OrderStatus =
   | "cancelled";
 
 export const ACTIVE_STATUSES: OrderStatus[] = ["new", "preparing", "ready"];
+export const PAST_STATUSES: OrderStatus[] = ["completed", "cancelled"];
 
 // Allowed forward transitions an owner can apply.
 export const NEXT_STATUS: Partial<Record<OrderStatus, OrderStatus>> = {
@@ -112,6 +113,23 @@ export async function listIncoming(
       ORDER BY created_at ASC;
     `,
     params,
+  );
+  return result.rows.map(rowToOrder);
+}
+
+/** Completed/cancelled orders for an owner's verified shops, newest first. */
+export async function listPastIncoming(ownerId: string): Promise<Order[]> {
+  const osmIds = await getVerifiedOsmIds(ownerId);
+  if (osmIds.length === 0) return [];
+
+  const result = await getPool().query<OrderRow>(
+    `
+      SELECT * FROM orders
+      WHERE osm_id = ANY($1) AND status = ANY($2)
+      ORDER BY created_at DESC
+      LIMIT 100;
+    `,
+    [osmIds, PAST_STATUSES],
   );
   return result.rows.map(rowToOrder);
 }
