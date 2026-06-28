@@ -31,7 +31,7 @@ export default function SignInPage() {
         return;
       }
 
-      router.push("/account");
+      router.push(data.customer?.role === "owner" ? "/dashboard" : "/account");
       router.refresh();
     } catch {
       setError("Sign in failed.");

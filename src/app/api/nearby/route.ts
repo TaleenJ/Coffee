@@ -31,22 +31,37 @@ function imageUrlFromTags(tags: Record<string, string> = {}): string | undefined
     return undefined;
 }
 
-// Chains we deliberately exclude from results. Matched against name/brand/
-// operator so renamed-but-branded locations are still caught.
-const EXCLUDED_CHAINS = ["starbucks"];
+// Known coffee chains (lowercase). We don't exclude these anymore — we just flag
+// them so the client can offer a "hide chains" filter. The OSM `brand` tag is the
+// strongest signal (chains are brand-tagged); the name list is a fallback.
+const CHAIN_KEYWORDS = [
+    "starbucks",
+    "terria mia",
+    "lees coffee",
+    "lee's coffee",
+    "dunkin",
+    "peet's",
+    "peets",
+    "costa",
+    "tim hortons",
+    "caribou",
+    "philz",
+    "blue bottle",
+    "the coffee bean",
+    "gloria jean",
+    "biggby",
+];
 
-function isExcludedChain(tags: Record<string, string> = {}): boolean {
-    const haystack = [
-        tags.name,
-        tags.brand,
-        tags["brand:en"],
-        tags.operator,
-    ]
+function isChainShop(tags: Record<string, string> = {}): boolean {
+    // A brand / chain reference on the OSM object is a reliable chain signal.
+    if (tags.brand || tags["brand:wikidata"]) return true;
+
+    const haystack = [tags.name, tags["brand:en"], tags.operator]
         .filter(Boolean)
         .join(" ")
         .toLowerCase();
 
-    return EXCLUDED_CHAINS.some((chain) => haystack.includes(chain));
+    return CHAIN_KEYWORDS.some((chain) => haystack.includes(chain));
 }
 
 // Assemble the best address we can from whatever addr:* tags OSM provides.
@@ -182,7 +197,6 @@ export async function GET(request: Request) {
             if (shopLat === undefined || shopLng === undefined) return null;
 
             const tags = el.tags ?? {};
-            if (isExcludedChain(tags)) return null;
 
             return {
                 id: String(el.id),
@@ -195,6 +209,7 @@ export async function GET(request: Request) {
                 imageUrl: imageUrlFromTags(tags),
                 phone: tags.phone ?? tags["contact:phone"] ?? undefined,
                 openingHours: tags.opening_hours ?? undefined,
+                isChain: isChainShop(tags),
             };
         })
         .filter((shop): shop is NonNullable<typeof shop> => shop !== null)

@@ -10,12 +10,14 @@ export async function POST(request: Request) {
       email?: string;
       password?: string;
       rememberMe?: boolean;
+      role?: string;
     };
 
     const name = body.name?.trim() ?? "";
     const email = body.email?.trim().toLowerCase() ?? "";
     const password = body.password ?? "";
     const rememberMe = Boolean(body.rememberMe);
+    const role = body.role === "owner" ? "owner" : "user";
 
     if (!name || !email || !password) {
       return NextResponse.json(
@@ -47,19 +49,20 @@ export async function POST(request: Request) {
 
     const passwordHash = await bcrypt.hash(password, 10);
 
-    let customer: { id: string; name: string; email: string };
+    let customer: { id: string; name: string; email: string; role: string };
     try {
       const inserted = await getPool().query<{
         id: string;
         name: string;
         email: string;
+        role: string;
       }>(
         `
-          INSERT INTO customers (name, email, password_hash)
-          VALUES ($1, $2, $3)
-          RETURNING id, name, email;
+          INSERT INTO customers (name, email, password_hash, role)
+          VALUES ($1, $2, $3, $4)
+          RETURNING id, name, email, role;
         `,
-        [name, email, passwordHash],
+        [name, email, passwordHash, role],
       );
       customer = inserted.rows[0];
     } catch (insertError) {

@@ -2,11 +2,14 @@ import Link from "next/link";
 import BottomNav from "@/components/BottomNav";
 import LogoutButton from "@/components/LogoutButton";
 import { getCurrentCustomer } from "@/lib/auth";
+import { ensureAuthTables } from "@/lib/db";
 
-const accountItems = ["Orders", "Payment Methods", "Settings"];
+const accountItems = ["Payment Methods", "Settings"];
 
 export default async function AccountGuestPage() {
+  await ensureAuthTables();
   const customer = await getCurrentCustomer();
+  const isOwner = customer?.role === "owner";
 
   return (
     <div className="page">
@@ -18,6 +21,14 @@ export default async function AccountGuestPage() {
           <>
             <h1 className="account-title">Hello {customer.name || "Richard"} ☕</h1>
             <div className="account-list">
+              {isOwner && (
+                <Link href="/dashboard" className="account-list-item">
+                  🏪 Shop dashboard
+                </Link>
+              )}
+              <Link href="/account/orders" className="account-list-item">
+                Orders
+              </Link>
               <Link href="/account/favorites" className="account-list-item">
                 Favorites
               </Link>

@@ -96,9 +96,10 @@ export async function getCurrentCustomer() {
       id: string;
       name: string;
       email: string;
+      role: string;
     }>(
       `
-        SELECT c.id, c.name, c.email
+        SELECT c.id, c.name, c.email, c.role
         FROM customer_sessions s
         JOIN customers c ON c.id = s.customer_id
         WHERE s.session_token = $1

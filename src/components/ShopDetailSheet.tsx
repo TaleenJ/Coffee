@@ -3,15 +3,24 @@
 import { useEffect, useRef, useState, type TouchEvent } from "react";
 import type { FavoriteShop } from "@/lib/coffeeShops";
 import { formatOpeningHours } from "@/lib/openingHours";
+import OrderModal from "@/components/OrderModal";
+import ShopReviews from "@/components/ShopReviews";
 
 function hasRealAddress(address?: string): boolean {
   return !!address && address.trim() !== "" && address !== "Address unavailable";
 }
 
-function buildMapsUrl(name: string, address: string | null): string {
+function mapsQuery(name: string, address: string | null): string {
   // Open external maps by name (+ address when we have a real one) per the design.
-  const query = [name, address ?? ""].filter(Boolean).join(" ");
-  return `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(query)}`;
+  return encodeURIComponent([name, address ?? ""].filter(Boolean).join(" "));
+}
+
+function buildGoogleMapsUrl(name: string, address: string | null): string {
+  return `https://www.google.com/maps/search/?api=1&query=${mapsQuery(name, address)}`;
+}
+
+function buildAppleMapsUrl(name: string, address: string | null): string {
+  return `https://maps.apple.com/?q=${mapsQuery(name, address)}`;
 }
 
 export default function ShopDetailSheet({
@@ -25,6 +34,8 @@ export default function ShopDetailSheet({
   const [copied, setCopied] = useState(false);
   const [resolvedAddress, setResolvedAddress] = useState<string | null>(null);
   const [resolving, setResolving] = useState(false);
+  const [ordering, setOrdering] = useState(false);
+  const [showMapChoice, setShowMapChoice] = useState(false);
   const startY = useRef<number | null>(null);
 
   // Reset transient UI and, when a shop lacks an address, reverse-geocode its
@@ -34,6 +45,8 @@ export default function ShopDetailSheet({
     setCopied(false);
     setResolvedAddress(null);
     setResolving(false);
+    setOrdering(false);
+    setShowMapChoice(false);
 
     if (!shop || hasRealAddress(shop.address)) return;
     if (shop.lat === undefined || shop.lng === undefined) return;
@@ -100,6 +113,7 @@ export default function ShopDetailSheet({
   }
 
   return (
+    <>
     <div className="detail-overlay" onClick={onClose}>
       <div
         className="detail-sheet"
@@ -174,20 +188,52 @@ export default function ShopDetailSheet({
             </button>
           )}
 
-          <a
-            className="detail-btn"
-            href={buildMapsUrl(shop.name, effectiveAddress)}
-            target="_blank"
-            rel="noopener noreferrer"
+          <button
+            type="button"
+            className={`detail-btn${showMapChoice ? " detail-btn-active" : ""}`}
+            onClick={() => setShowMapChoice((v) => !v)}
+            aria-expanded={showMapChoice}
           >
             Map
-          </a>
+          </button>
 
-          <button type="button" className="detail-btn detail-btn-primary">
+          <button
+            type="button"
+            className="detail-btn detail-btn-primary"
+            onClick={() => setOrdering(true)}
+          >
             Order
           </button>
         </div>
+
+        {showMapChoice && (
+          <div className="map-choice" role="menu">
+            <a
+              className="detail-btn"
+              href={buildAppleMapsUrl(shop.name, effectiveAddress)}
+              target="_blank"
+              rel="noopener noreferrer"
+              onClick={() => setShowMapChoice(false)}
+            >
+              Apple Maps
+            </a>
+            <a
+              className="detail-btn"
+              href={buildGoogleMapsUrl(shop.name, effectiveAddress)}
+              target="_blank"
+              rel="noopener noreferrer"
+              onClick={() => setShowMapChoice(false)}
+            >
+              Google Maps
+            </a>
+          </div>
+        )}
+
+        <ShopReviews osmId={shop.id} />
       </div>
     </div>
+
+    {ordering && <OrderModal shop={shop} onClose={() => setOrdering(false)} />}
+    </>
   );
 }

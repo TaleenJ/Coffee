@@ -5,11 +5,16 @@ import BottomNav from "@/components/BottomNav";
 import CoffeeShopCard from "@/components/CoffeeShopCard";
 import FilterSheet from "@/components/FilterSheet";
 import { CoffeeShop, Vibe } from "@/lib/coffeeShops";
+import { availableDrinkIdsForShop, shopHasPromo, shopHasVegan } from "@/lib/menu";
 import { readLastLocation, type SavedLocation } from "@/lib/lastLocation";
 
 export default function HomePage() {
   const [filtersOpen, setFiltersOpen] = useState(false);
   const [selectedVibes, setSelectedVibes] = useState<Vibe[]>([]);
+  const [selectedDrinks, setSelectedDrinks] = useState<string[]>([]);
+  const [veganOnly, setVeganOnly] = useState(false);
+  const [promoOnly, setPromoOnly] = useState(false);
+  const [hideChains, setHideChains] = useState(false);
   const [shops, setShops] = useState<CoffeeShop[]>([]);
   const [status, setStatus] = useState<"idle" | "loading" | "error" | "done">("idle");
   const [errorMessage, setErrorMessage] = useState<string>(
@@ -29,6 +34,30 @@ export default function HomePage() {
 
       setShops(data.shops);
       setStatus("done");
+
+      // Overlay first-party review averages onto the cards (OSM has no ratings).
+      const ids = (data.shops as CoffeeShop[]).map((s) => s.id);
+      if (ids.length > 0) {
+        try {
+          const sumRes = await fetch(
+            `/api/reviews/summary?osmIds=${encodeURIComponent(ids.join(","))}`,
+          );
+          if (sumRes.ok) {
+            const { summaries } = (await sumRes.json()) as {
+              summaries: Record<string, { average: number; count: number }>;
+            };
+            setShops((prev) =>
+              prev.map((s) =>
+                summaries[s.id]
+                  ? { ...s, rating: summaries[s.id].average }
+                  : s,
+              ),
+            );
+          }
+        } catch {
+          /* ratings are best-effort; ignore failures */
+        }
+      }
     } catch (err) {
       console.error("Failed to load nearby shops:", err);
       setErrorMessage(
@@ -105,12 +134,40 @@ export default function HomePage() {
     );
   }
 
-  const filteredShops = useMemo(() => {
-    if (selectedVibes.length === 0) return shops;
-    return shops.filter((shop) =>
-      selectedVibes.every((vibe) => shop.vibes.includes(vibe)),
+  function toggleDrink(drinkId: string) {
+    setSelectedDrinks((prev) =>
+      prev.includes(drinkId)
+        ? prev.filter((d) => d !== drinkId)
+        : [...prev, drinkId],
     );
-  }, [shops, selectedVibes]);
+  }
+
+  const activeFilterCount =
+    selectedVibes.length +
+    selectedDrinks.length +
+    (veganOnly ? 1 : 0) +
+    (promoOnly ? 1 : 0) +
+    (hideChains ? 1 : 0);
+
+  const filteredShops = useMemo(() => {
+    return shops.filter((shop) => {
+      const matchesVibes = selectedVibes.every((vibe) =>
+        shop.vibes.includes(vibe),
+      );
+      if (!matchesVibes) return false;
+
+      if (selectedDrinks.length > 0) {
+        const drinks = availableDrinkIdsForShop(shop.id);
+        if (!selectedDrinks.every((d) => drinks.includes(d))) return false;
+      }
+
+      if (veganOnly && !shopHasVegan(shop.id)) return false;
+      if (promoOnly && !shopHasPromo(shop.id)) return false;
+      if (hideChains && shop.isChain) return false;
+
+      return true;
+    });
+  }, [shops, selectedVibes, selectedDrinks, veganOnly, promoOnly, hideChains]);
 
   return (
     <div className="page">
@@ -139,10 +196,10 @@ export default function HomePage() {
           )}
           <button
             type="button"
-            className={`filters-btn${selectedVibes.length ? " filters-btn-active" : ""}`}
+            className={`filters-btn${activeFilterCount ? " filters-btn-active" : ""}`}
             onClick={() => setFiltersOpen(true)}
           >
-            Filters{selectedVibes.length ? ` (${selectedVibes.length})` : ""}
+            Filters{activeFilterCount ? ` (${activeFilterCount})` : ""}
           </button>
         </div>
       </header>
@@ -171,7 +228,7 @@ export default function HomePage() {
             <p className="empty-state">{errorMessage}</p>
           )}
           {status === "done" && filteredShops.length === 0 && (
-            <p className="empty-state">No coffee shops match those vibes yet.</p>
+            <p className="empty-state">No coffee shops match those filters yet.</p>
           )}
           {filteredShops.map((shop) => (
             <CoffeeShopCard key={shop.id} shop={shop} />
@@ -182,8 +239,22 @@ export default function HomePage() {
       <FilterSheet
         open={filtersOpen}
         selected={selectedVibes}
+        selectedDrinks={selectedDrinks}
+        veganOnly={veganOnly}
+        promoOnly={promoOnly}
+        hideChains={hideChains}
         onToggleVibe={toggleVibe}
-        onClear={() => setSelectedVibes([])}
+        onToggleDrink={toggleDrink}
+        onToggleVegan={() => setVeganOnly((v) => !v)}
+        onTogglePromo={() => setPromoOnly((v) => !v)}
+        onToggleHideChains={() => setHideChains((v) => !v)}
+        onClear={() => {
+          setSelectedVibes([]);
+          setSelectedDrinks([]);
+          setVeganOnly(false);
+          setPromoOnly(false);
+          setHideChains(false);
+        }}
         onClose={() => setFiltersOpen(false)}
       />
     </div>

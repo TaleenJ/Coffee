@@ -2,6 +2,7 @@
 
 import type { KeyboardEvent } from "react";
 import { stockImageForId, type FavoriteShop } from "@/lib/coffeeShops";
+import { promoTextForShop, shopHasPromo, shopHasVegan } from "@/lib/menu";
 import FavoriteStar from "@/components/FavoriteStar";
 import ShopImage from "@/components/ShopImage";
 import { useShopDetail } from "@/components/ShopDetailProvider";
@@ -24,6 +25,10 @@ export default function CoffeeShopCard({ shop }: { shop: FavoriteShop }) {
         !!shop.address &&
         shop.address.trim() !== "" &&
         shop.address !== "Address unavailable";
+
+    const vegan = shopHasVegan(shop.id);
+    const promo = shopHasPromo(shop.id);
+    const isChain = shop.isChain === true;
 
     function handleKeyDown(event: KeyboardEvent<HTMLElement>) {
         if (event.key === "Enter" || event.key === " ") {
@@ -50,6 +55,25 @@ export default function CoffeeShopCard({ shop }: { shop: FavoriteShop }) {
                         <p className="shop-meta">{metaParts.join(" · ")}</p>
                     )}
                     {hasAddress && <p className="shop-address">{shop.address}</p>}
+                    {(vegan || promo || isChain) && (
+                        <div className="shop-badges">
+                            {isChain && (
+                                <span className="shop-badge shop-badge-chain">
+                                    🏢 Chain
+                                </span>
+                            )}
+                            {vegan && (
+                                <span className="shop-badge shop-badge-vegan">
+                                    🌱 Vegan
+                                </span>
+                            )}
+                            {promo && (
+                                <span className="shop-badge shop-badge-promo">
+                                    🏷 {promoTextForShop(shop.id)}
+                                </span>
+                            )}
+                        </div>
+                    )}
                 </div>
             </div>
             <div className="shop-vibes">

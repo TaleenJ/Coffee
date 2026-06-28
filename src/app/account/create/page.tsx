@@ -11,6 +11,7 @@ export default function CreateAccountPage() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [rememberMe, setRememberMe] = useState(true);
+  const [role, setRole] = useState<"user" | "owner">("user");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
 
@@ -23,7 +24,7 @@ export default function CreateAccountPage() {
       const response = await fetch("/api/auth/register", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ name, email, password, rememberMe }),
+        body: JSON.stringify({ name, email, password, rememberMe, role }),
       });
       const data = await response.json();
 
@@ -32,7 +33,8 @@ export default function CreateAccountPage() {
         return;
       }
 
-      router.push("/account");
+      // Owners go straight to their dashboard to claim a shop.
+      router.push(data.customer?.role === "owner" ? "/dashboard" : "/account");
       router.refresh();
     } catch {
       setError("Create account failed.");
@@ -47,6 +49,26 @@ export default function CreateAccountPage() {
         <h1 className="account-title">Create Account</h1>
 
         <form className="account-form" onSubmit={onSubmit}>
+          <span className="account-label">Account type</span>
+          <div className="role-toggle">
+            <button
+              type="button"
+              className={`role-option${role === "user" ? " role-option-active" : ""}`}
+              onClick={() => setRole("user")}
+              aria-pressed={role === "user"}
+            >
+              ☕ Customer
+            </button>
+            <button
+              type="button"
+              className={`role-option${role === "owner" ? " role-option-active" : ""}`}
+              onClick={() => setRole("owner")}
+              aria-pressed={role === "owner"}
+            >
+              🏪 Shop owner
+            </button>
+          </div>
+
           <label className="account-label" htmlFor="create-name">
             Name
           </label>

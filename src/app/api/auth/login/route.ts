@@ -48,7 +48,12 @@ export async function POST(request: Request) {
     await createSession(customer.id, rememberMe, getClientInfo(request));
 
     return NextResponse.json({
-      customer: { id: customer.id, name: customer.name, email: customer.email },
+      customer: {
+        id: customer.id,
+        name: customer.name,
+        email: customer.email,
+        role: customer.role,
+      },
     });
   } catch (error) {
     console.error("Login error:", error);

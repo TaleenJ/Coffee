@@ -19,6 +19,7 @@ export type CoffeeShop = {
     imageUrl?: string;
     phone?: string;
     openingHours?: string;
+    isChain?: boolean;
 };
 
 // A shop as stored/restored from favorites. Looser than CoffeeShop because
@@ -36,6 +37,7 @@ export type FavoriteShop = {
     imageUrl?: string;
     phone?: string;
     openingHours?: string;
+    isChain?: boolean;
 };
 
 // Free, ambient coffee photos (Unsplash CDN) used when a shop has no real OSM
